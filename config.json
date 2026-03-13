@@ -1,0 +1,29 @@
+{
+  "winscp_path": "D:\\WinSCP\\winscp.com",
+  "ini_path": "C:\\Users\\stemp\\Documents\\WinSCP_03_13_26.ini",
+  "download_root": "D:\\Local Sites",
+  "default_remote_path": "/public_html",
+  "ignore_patterns": [
+    "error_log*",
+    "*.bak",
+    "*.log",
+    "*.tar",
+    "*.tar.gz",
+    "*.tgz",
+    "*.zip",
+    "*.gz",
+    "node_modules/",
+    "vendor/",
+    "vendors/",
+    "cgi-bin/",
+    ".ftpquota",
+    "*.swp",
+    "*.tmp",
+    ".git/",
+    "cache/",
+    "wp-content/cache/",
+    "wp-content/upgrade/",
+    "wp-content/backups/",
+    "backups/"
+  ]
+}
