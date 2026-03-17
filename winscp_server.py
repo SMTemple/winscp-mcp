@@ -114,7 +114,7 @@ def _run_script(script_lines: list[str], timeout: int = 120) -> tuple[int, str]:
 
     try:
         result = subprocess.run(
-            [WINSCP_PATH, f"/ini={INI_PATH}", f"/script={script_path}"],
+            ["cmd.exe", "/c", WINSCP_PATH, f"/ini={INI_PATH}", f"/script={script_path}"],
             capture_output=True, text=True, timeout=timeout,
             encoding="utf-8", errors="replace",
         )
@@ -314,7 +314,7 @@ def download_site(
 
         try:
             result = subprocess.run(
-                [WINSCP_PATH, f"/ini={INI_PATH}", f"/script={script_path}"],
+                ["cmd.exe", "/c", WINSCP_PATH, f"/ini={INI_PATH}", f"/script={script_path}"],
                 capture_output=True, text=True, timeout=3600,
                 encoding="utf-8", errors="replace",
             )
@@ -446,8 +446,8 @@ def upload_file(
     # Build put commands
     put_cmds = []
     for f in files:
-        # Normalize to forward slashes for WinSCP
-        f_norm = f.replace("\\", "/")
+        # Use backslashes for local Windows paths (WinSCP requires them)
+        f_norm = f.replace("/", "\\")
         put_cmds.append(f'put "{f_norm}" "{remote_path}"')
 
     script = [
@@ -503,8 +503,8 @@ def upload_directory(
     if not os.path.isdir(local_path):
         return f"Local directory not found: {local_path}"
 
-    # Normalize path
-    local_path = local_path.replace("\\", "/")
+    # Use backslashes for local Windows paths (WinSCP requires them)
+    local_path = local_path.replace("/", "\\")
 
     # Build filemask
     extra = [p.strip() for p in exclude.split(",") if p.strip()] if exclude else None

@@ -1,5 +1,5 @@
 {
-  "winscp_path": "D:\\WinSCP\\winscp.com",
+  "winscp_path": "D:\\WinSCP\\winscp_cli.bat",
   "ini_path": "C:\\Users\\stemp\\Documents\\WinSCP_03_13_26.ini",
   "download_root": "D:\\Local Sites",
   "default_remote_path": "/public_html",
@@ -24,6 +24,10 @@
     "wp-content/cache/",
     "wp-content/upgrade/",
     "wp-content/backups/",
-    "backups/"
+    "backups/",
+    "applications/",
+    "apps/",
+    "apps-back/",
+    "uploads/"
   ]
 }
