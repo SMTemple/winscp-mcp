@@ -113,9 +113,8 @@ def _run_script(script_lines: list[str], timeout: int = 120) -> tuple[int, str]:
         script_path = f.name
 
     try:
-        cmd = f'"{WINSCP_PATH}" /ini="{INI_PATH}" /script="{script_path}"'
         result = subprocess.run(
-            ["cmd.exe", "/c", cmd],
+            [WINSCP_PATH, f"/ini={INI_PATH}", f"/script={script_path}"],
             capture_output=True, text=True, timeout=timeout,
             encoding="utf-8", errors="replace",
         )
@@ -314,9 +313,8 @@ def download_site(
             _downloads[dl_id]["started"] = time.time()
 
         try:
-            cmd = f'"{WINSCP_PATH}" /ini="{INI_PATH}" /script="{script_path}"'
             result = subprocess.run(
-                ["cmd.exe", "/c", cmd],
+                [WINSCP_PATH, f"/ini={INI_PATH}", f"/script={script_path}"],
                 capture_output=True, text=True, timeout=3600,
                 encoding="utf-8", errors="replace",
             )
