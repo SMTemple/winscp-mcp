@@ -1,6 +1,6 @@
 """WinSCP MCP server for FTP/SFTP site management.
 
-Provides tools to list, browse, and download sites from WinSCP saved sessions.
+Provides tools to list, browse, download, and upload sites from WinSCP saved sessions.
 Uses WinSCP CLI scripting under the hood.
 
 Configuration via config.json (next to this file) or environment variables:
@@ -410,6 +410,141 @@ def download_status(download_id: str = "") -> str:
         for did, dl in _downloads.items():
             lines.append(f"  {did}: {dl['status']} — {dl.get('site', '?')} -> {dl.get('local_path', '?')}")
         return "\n".join(lines)
+
+
+@mcp.tool()
+def upload_file(
+    site_name: str,
+    local_path: str,
+    remote_path: str = "",
+) -> str:
+    """Upload one or more local files to a remote FTP/SFTP server.
+
+    Args:
+        site_name: The site name (or partial match). Example: 'eccleston law'
+        local_path: Local file or files to upload. Comma-separated for multiple files.
+                    Example: 'C:/Users/me/file.php' or 'C:/path/a.php,C:/path/b.php'
+        remote_path: Remote directory to upload into (default: /public_html).
+                     Must be a directory path, not a file path.
+    """
+    sessions = _parse_ini()
+    session_key = _find_session(sessions, site_name)
+    if not session_key:
+        return f"No site found matching '{site_name}'."
+
+    if not remote_path:
+        remote_path = DEFAULT_REMOTE
+
+    # Ensure remote_path ends with /
+    if not remote_path.endswith("/"):
+        remote_path += "/"
+
+    # Parse file list
+    files = [f.strip() for f in local_path.split(",") if f.strip()]
+    missing = [f for f in files if not os.path.exists(f)]
+    if missing:
+        return f"Local file(s) not found:\n" + "\n".join(f"  - {f}" for f in missing)
+
+    # Build put commands
+    put_cmds = []
+    for f in files:
+        # Normalize to forward slashes for WinSCP
+        f_norm = f.replace("\\", "/")
+        put_cmds.append(f'put "{f_norm}" "{remote_path}"')
+
+    script = [
+        "option batch abort",
+        "option confirm off",
+        f"open \"{session_key}\"",
+        "option transfer binary",
+    ] + put_cmds + ["exit"]
+
+    code, output = _run_script(script, timeout=120)
+
+    if code == 0:
+        file_names = [os.path.basename(f) for f in files]
+        return (
+            f"Upload successful!\n"
+            f"  Site: {_decode_name(session_key)}\n"
+            f"  Files: {', '.join(file_names)}\n"
+            f"  Remote: {remote_path}"
+        )
+    else:
+        return f"Upload failed (exit code {code}).\nWinSCP output:\n{output}"
+
+
+@mcp.tool()
+def upload_directory(
+    site_name: str,
+    local_path: str,
+    remote_path: str = "",
+    exclude: str = "",
+    preview: bool = True,
+) -> str:
+    """Synchronize a local directory to a remote FTP/SFTP server (upload changed files).
+
+    Uses WinSCP's synchronize command to only upload files that have changed.
+
+    Args:
+        site_name: The site name (or partial match). Example: 'eccleston law'
+        local_path: Local directory to upload from. Example: 'D:/Local Sites/Eccleston'
+        remote_path: Remote directory to sync to (default: /public_html)
+        exclude: Extra comma-separated exclude patterns (e.g. '*.zip,backups/')
+                 Added on top of the global ignore list.
+        preview: If True (default), only preview changes without uploading.
+                 Set to False to actually upload.
+    """
+    sessions = _parse_ini()
+    session_key = _find_session(sessions, site_name)
+    if not session_key:
+        return f"No site found matching '{site_name}'."
+
+    if not remote_path:
+        remote_path = DEFAULT_REMOTE
+
+    if not os.path.isdir(local_path):
+        return f"Local directory not found: {local_path}"
+
+    # Normalize path
+    local_path = local_path.replace("\\", "/")
+
+    # Build filemask
+    extra = [p.strip() for p in exclude.split(",") if p.strip()] if exclude else None
+    filemask = _build_filemask(extra)
+    filemask_opt = f' -filemask="{filemask}"' if filemask else ""
+
+    preview_flag = " -preview" if preview else ""
+
+    script = [
+        "option batch continue",
+        "option confirm off",
+        f"open \"{session_key}\"",
+        "option transfer binary",
+        f'synchronize remote{preview_flag}{filemask_opt} "{local_path}" "{remote_path}"',
+        "exit",
+    ]
+
+    timeout = 60 if preview else 600
+    code, output = _run_script(script, timeout=timeout)
+
+    if preview:
+        return (
+            f"Upload preview (no changes made):\n"
+            f"  Site: {_decode_name(session_key)}\n"
+            f"  Local: {local_path}\n"
+            f"  Remote: {remote_path}\n\n"
+            f"WinSCP output:\n{output}\n\n"
+            f"To actually upload, call upload_directory with preview=False."
+        )
+    else:
+        status = "completed" if code == 0 else f"completed with errors (exit code {code})"
+        return (
+            f"Upload {status}.\n"
+            f"  Site: {_decode_name(session_key)}\n"
+            f"  Local: {local_path}\n"
+            f"  Remote: {remote_path}\n\n"
+            f"WinSCP output:\n{output}"
+        )
 
 
 @mcp.tool()
